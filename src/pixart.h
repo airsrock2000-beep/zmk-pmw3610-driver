@@ -40,6 +40,7 @@ struct pixart_data {
     // the work structure for delayable init steps
     struct k_work_delayable init_work;
     int async_init_step;
+    int async_init_retries; // cold-boot fix: full-sequence retries used so far
 
     //
     bool ready;           // whether init is finished successfully
