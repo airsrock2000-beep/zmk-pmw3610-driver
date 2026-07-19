@@ -518,6 +518,12 @@ static int pmw3610_async_init_configure(const struct device *dev) {
     return 0;
 }
 
+/* Cold-boot robustness: a failed init step (e.g. product-id read while VCC is
+ * still ramping) used to abort init permanently, leaving the trackball dead
+ * until a power cycle. Instead, restart the whole sequence from power-up. */
+#define PMW3610_ASYNC_INIT_MAX_RETRIES 10
+#define PMW3610_ASYNC_INIT_RETRY_DELAY_MS 500
+
 // checked and keep
 static void pmw3610_async_init(struct k_work *work) {
     struct k_work_delayable *work2 = (struct k_work_delayable *)work;
@@ -528,7 +534,16 @@ static void pmw3610_async_init(struct k_work *work) {
 
     data->err = async_init_fn[data->async_init_step](dev);
     if (data->err) {
-        LOG_ERR("PMW3610 initialization failed");
+        if (data->async_init_retries < PMW3610_ASYNC_INIT_MAX_RETRIES) {
+            data->async_init_retries++;
+            LOG_WRN("PMW3610 init step %d failed (err %d), retrying from power-up (%d/%d)",
+                    data->async_init_step, data->err, data->async_init_retries,
+                    PMW3610_ASYNC_INIT_MAX_RETRIES);
+            data->async_init_step = ASYNC_INIT_STEP_POWER_UP;
+            k_work_schedule(&data->init_work, K_MSEC(PMW3610_ASYNC_INIT_RETRY_DELAY_MS));
+        } else {
+            LOG_ERR("PMW3610 initialization failed");
+        }
     } else {
         data->async_init_step++;
 
