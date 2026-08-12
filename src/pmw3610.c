@@ -643,6 +643,10 @@ static int pmw3610_report_data(const struct device *dev) {
         TOINT16((buf[PMW3610_X_L_POS] + ((buf[PMW3610_XY_H_POS] & 0xF0) << 4)), 12) / dividor;
     int16_t raw_y =
         TOINT16((buf[PMW3610_Y_L_POS] + ((buf[PMW3610_XY_H_POS] & 0x0F) << 8)), 12) / dividor;
+
+    /* TEMP DEBUG (2026-08-12): confirm the sensor is delivering motion during the
+     * "dead for 1-2 minutes after power-on" window. Remove before merging to main. */
+    LOG_DBG("motion raw x=%d y=%d", raw_x, raw_y);
     
 #ifdef CONFIG_PMW3610_ADJUSTABLE_MOUSESPEED
     int16_t movement_size = abs(raw_x) + abs(raw_y);
